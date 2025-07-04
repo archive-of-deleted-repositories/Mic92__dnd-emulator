@@ -25,10 +25,8 @@ CORS(app)
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
-# Initialize Claude GM
-gm = ClaudeGM()
-
 # Game sessions storage (in-memory for now)
+# Each session will have its own GM instance
 game_sessions: dict[str, dict[str, Any]] = {}
 
 
@@ -47,7 +45,8 @@ def handle_connect() -> None:
 @socketio.on("disconnect")
 def handle_disconnect() -> None:
     """Handle client disconnection."""
-    # Clean up session if needed
+    # Note: In production, you'd want to track which session_id belongs to which client
+    # and clean up the GM instance when the last client disconnects
 
 
 @socketio.on("send_message")
@@ -65,9 +64,11 @@ def handle_message(data: dict[str, Any]) -> None:
                 "current_scene": "Tavern",
                 "initiative_order": [],
             },
+            "gm": ClaudeGM(),  # Create GM instance for this session
         }
 
     session = game_sessions[session_id]
+    gm = session["gm"]
 
     # Add message to history
     session["history"].append(f"Player: {message}")
@@ -144,7 +145,20 @@ def handle_dice_roll(data: dict[str, Any]) -> None:
         emit("error", {"message": f"Invalid dice notation: {e!s}"})
 
 
+async def cleanup_sessions() -> None:
+    """Clean up all GM sessions."""
+    for session in game_sessions.values():
+        if "gm" in session:
+            await session["gm"].stop_session()
+
+
 if __name__ == "__main__":
-    socketio.run(
-        app, debug=True, host="127.0.0.1", port=5000, allow_unsafe_werkzeug=True,
-    )
+    try:
+        socketio.run(
+            app, debug=True, host="127.0.0.1", port=5000, allow_unsafe_werkzeug=True,
+        )
+    finally:
+        # Clean up sessions on shutdown
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(cleanup_sessions())
+        loop.close()
