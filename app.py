@@ -89,11 +89,14 @@ def handle_message(data: dict[str, Any]) -> None:
         session["history"].append(f"GM: {gm_response}")
 
         # Emit response
-        emit("gm_response", {
-            "response": parsed_response["response"],
-            "dice_rolls": parsed_response["dice_rolls"],
-            "session_id": session_id,
-        })
+        emit(
+            "gm_response",
+            {
+                "response": parsed_response["response"],
+                "dice_rolls": parsed_response["dice_rolls"],
+                "session_id": session_id,
+            },
+        )
 
     except RuntimeError as e:
         emit("error", {"message": f"Error: {e!s}"})
@@ -127,16 +130,21 @@ def handle_dice_roll(data: dict[str, Any]) -> None:
         rolls = [random.randint(1, die_size) for _ in range(num_dice)]  # noqa: S311
         total = sum(rolls) + modifier
 
-        emit("dice_result", {
-            "notation": notation,
-            "rolls": rolls,
-            "modifier": modifier,
-            "total": total,
-        })
+        emit(
+            "dice_result",
+            {
+                "notation": notation,
+                "rolls": rolls,
+                "modifier": modifier,
+                "total": total,
+            },
+        )
 
     except (ValueError, IndexError) as e:
         emit("error", {"message": f"Invalid dice notation: {e!s}"})
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, host="127.0.0.1", port=5000, allow_unsafe_werkzeug=True)
+    socketio.run(
+        app, debug=True, host="127.0.0.1", port=5000, allow_unsafe_werkzeug=True,
+    )
