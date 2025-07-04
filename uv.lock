@@ -51,6 +51,9 @@ dependencies = [
     { name = "flask-socketio" },
     { name = "python-dotenv" },
     { name = "python-socketio" },
+    { name = "types-flask" },
+    { name = "types-flask-cors" },
+    { name = "types-flask-socketio" },
 ]
 
 [package.optional-dependencies]
@@ -58,10 +61,7 @@ dev = [
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
-    { name = "python-dotenv", extra = ["cli"] },
     { name = "ruff" },
-    { name = "types-flask" },
-    { name = "types-flask-cors" },
 ]
 
 [package.metadata]
@@ -73,11 +73,11 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "python-dotenv", extras = ["cli"], marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "python-socketio", specifier = ">=5.10.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
-    { name = "types-flask", marker = "extra == 'dev'", specifier = ">=1.1.6" },
-    { name = "types-flask-cors", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "types-flask", specifier = ">=1.1.6" },
+    { name = "types-flask-cors", specifier = ">=4.0.0" },
+    { name = "types-flask-socketio", specifier = ">=5.5.0" },
 ]
 provides-extras = ["dev"]
 
@@ -293,11 +293,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5f/ed/539768cf28c661b5b068d66d96a2f155c4971a5d55684a514c1a0e0dec2f/python_dotenv-1.1.1-py3-none-any.whl", hash = "sha256:31f23644fe2602f88ff55e1f5c79ba497e01224ee7737937930c448e4d0e24dc", size = 20556, upload-time = "2025-06-24T04:21:06.073Z" },
 ]
 
-[package.optional-dependencies]
-cli = [
-    { name = "click" },
-]
-
 [[package]]
 name = "python-engineio"
 version = "4.12.2"
@@ -393,6 +388,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/b0/1457265478222c877ac38a79f24d579955380be2c5fdb4322b613aad059a/types_flask_cors-6.0.0.20250520.tar.gz", hash = "sha256:9357c21be733f65e568ff27e816426832f3e3fd906eedbb896bcc6b1cfa026e6", size = 9960, upload-time = "2025-05-20T03:06:28.545Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/9d/a983479a860d536805f9ea9fc7af147bcab7b73b573178d8bd36d8cf25c4/types_flask_cors-6.0.0.20250520-py3-none-any.whl", hash = "sha256:8898ed43a6b68d0b3b499e1d2f7aa696a99a001610de44e09fc6f404d16eb704", size = 10011, upload-time = "2025-05-20T03:06:27.379Z" },
+]
+
+[[package]]
+name = "types-flask-socketio"
+version = "5.5.0.20250516"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "flask" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9f/1d/26a65886baf3ec8f52b1eae1780fdfe4d761ca3b77f5abc76978660ebe32/types_flask_socketio-5.5.0.20250516.tar.gz", hash = "sha256:f1c5bbcc18ad0d795e5aad48ee44aa90bbd722ac44bc030757ed08ac471b9e5b", size = 9727, upload-time = "2025-05-16T03:09:06.789Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/97/a31cf5aa7f42d12b8b73695e777ad51ff96c475e4e1525a7e1a7eeda7999/types_flask_socketio-5.5.0.20250516-py3-none-any.whl", hash = "sha256:5c53eae7ad043ee980d7b1ca07aa52281163f8cb423cfbbd5e56f191f47d3380", size = 10283, upload-time = "2025-05-16T03:09:05.953Z" },
 ]
 
 [[package]]
