@@ -139,4 +139,4 @@ def handle_dice_roll(data: dict[str, Any]) -> None:
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, host="127.0.0.1", port=5000)
+    socketio.run(app, debug=True, host="127.0.0.1", port=5000, allow_unsafe_werkzeug=True)

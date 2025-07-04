@@ -17,11 +17,13 @@ This project uses Nix flakes for development environment management.
 ### Setup
 
 1. Enter the development shell:
+
    ```bash
    nix develop
    ```
 
 2. Install Python dependencies:
+
    ```bash
    uv sync
    ```

@@ -31,7 +31,9 @@ Your role is to:
 Keep responses concise but atmospheric. Always stay in character as the GM."""
 
     async def send_message(
-        self, message: str, context: dict[str, Any] | None = None,
+        self,
+        message: str,
+        context: dict[str, Any] | None = None,
     ) -> str:
         """Send a message to Claude and get the response."""
         # Prepare the full prompt with context
@@ -51,25 +53,24 @@ Keep responses concise but atmospheric. Always stay in character as the GM."""
 
     async def _run_claude_command(self, prompt_file: str) -> str:
         """Execute claude CLI command and return output."""
-        cmd = [
-            self.claude_path,
-            "--no-stream",
-            "--model", "claude-3-5-sonnet-20241022",
-            "--max-tokens", "1024",
-            "-",
-        ]
-
         # Read the prompt from file
         prompt_content = await asyncio.to_thread(Path(prompt_file).read_text)
 
+        cmd = [
+            self.claude_path,
+            "--print",
+            "--model",
+            "claude-3-5-sonnet-20241022",
+            prompt_content,
+        ]
+
         process = await asyncio.create_subprocess_exec(
             *cmd,
-            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
 
-        stdout, stderr = await process.communicate(input=prompt_content.encode())
+        stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
             error_msg = f"Claude CLI error: {stderr.decode()}"
@@ -106,7 +107,6 @@ Keep responses concise but atmospheric. Always stay in character as the GM."""
         return {
             "response": response,
             "dice_rolls": [
-                {"notation": roll[0], "result": int(roll[1])}
-                for roll in rolls
+                {"notation": roll[0], "result": int(roll[1])} for roll in rolls
             ],
         }
