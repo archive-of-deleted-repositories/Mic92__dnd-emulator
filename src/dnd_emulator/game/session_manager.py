@@ -114,7 +114,7 @@ class ClaudeSessionManager:
             return None
 
         # Initialize session data
-        summary = self._extract_summary(lines[0])
+        summary = self._extract_summary(lines[0], session_name)
 
         # Process all entries
         parsed_data = self._process_session_entries(lines)
@@ -134,13 +134,17 @@ class ClaudeSessionManager:
             "messages": parsed_data["messages"],
         }
 
-    def _extract_summary(self, first_line: str) -> str:
+    def _extract_summary(self, first_line: str, session_name: str) -> str:
         """Extract summary from the first line of session file."""
         try:
             data = json.loads(first_line)
-            return str(data.get("summary", "No summary available"))
+            summary = data.get("summary")
+            if summary:
+                return str(summary)
+            # Fallback to session name
+            return session_name.replace("_", " ").title()
         except json.JSONDecodeError:
-            return "No summary available"
+            return session_name.replace("_", " ").title()
 
     def _get_file_mtime(self, file_path: Path) -> datetime:
         """Get file modification time as datetime."""
