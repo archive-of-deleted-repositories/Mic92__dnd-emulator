@@ -29,5 +29,5 @@ def handle_session_switch(data: dict[str, Any]) -> None:
         app.gm.set_session(session_id)
     else:
         logger.info("Cleared session selection")
-    
+
     emit("session_switched", {"session_id": session_id})

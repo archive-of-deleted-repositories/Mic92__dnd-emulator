@@ -30,23 +30,22 @@ class TestClaudeSessionManager:
         # Create a mock ~/.claude/projects/ directory structure
         mock_claude_home = tmp_path / ".claude" / "projects"
         mock_claude_home.mkdir(parents=True)
-        
+
         # Create the encoded project directory path
         test_session_dir = test_sessions_dir / "test_dnd_adventure"
-        project_name = str(test_session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+        project_name = (
+            str(test_session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+        )
         if not project_name.startswith("-"):
             project_name = "-" + project_name
-        
+
         claude_project_dir = mock_claude_home / project_name
         claude_project_dir.mkdir(parents=True)
 
         # Copy our test session files
         assets_dir = Path(__file__).parent / "assets" / "claude_sessions"
-        files_copied = 0
-        for session_file in assets_dir.glob("*.jsonl"):
+        for _files_copied, session_file in enumerate(assets_dir.glob("*.jsonl")):
             shutil.copy(session_file, claude_project_dir)
-            files_copied += 1
-        print(f"Copied {files_copied} files to {claude_project_dir}")
 
         return claude_project_dir
 
@@ -54,7 +53,7 @@ class TestClaudeSessionManager:
     def session_manager(
         self,
         test_sessions_dir: Path,
-        mock_claude_project_dir: Path,
+        mock_claude_project_dir: Path,  # noqa: ARG002
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> ClaudeSessionManager:
@@ -77,9 +76,8 @@ class TestClaudeSessionManager:
         assert len(sessions) > 0, "Should find at least one session"
 
         # Debug: print all sessions
-        print(f"Session manager looking in: {session_manager.sessions_dir}")
-        for s in sessions:
-            print(f"Found session: {s['session_id']} with {s['message_count']} messages")
+        for _s in sessions:
+            pass
 
         # Find our test session
         test_session = None

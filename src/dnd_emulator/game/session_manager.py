@@ -36,10 +36,12 @@ class ClaudeSessionManager:
             # Find the newest Claude session file
             # Claude stores sessions in ~/.claude/projects/{encoded-path}/
             # where the path is encoded by replacing "/" "_" and "." with "-"
-            project_name = str(session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+            project_name = (
+                str(session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+            )
             if not project_name.startswith("-"):
                 project_name = "-" + project_name
-            
+
             claude_project_dir = Path.home() / ".claude" / "projects" / project_name
             if not claude_project_dir.exists():
                 # No Claude sessions yet in this directory
@@ -157,7 +159,9 @@ class ClaudeSessionManager:
         for i, line in enumerate(lines):
             entry = json.loads(line)
             if entry.get("type") in ["user", "assistant"]:
-                logger.debug("Line %d: Processing entry type: %s", i+1, entry.get("type"))
+                logger.debug(
+                    "Line %d: Processing entry type: %s", i + 1, entry.get("type")
+                )
             self._process_single_entry(entry, result)
 
         logger.debug("Processed %d messages total", result["message_count"])
@@ -196,9 +200,9 @@ class ClaudeSessionManager:
                 message_data.get("content", ""),
             )
             logger.debug(
-                "Extracted content (%d chars): %s...", 
+                "Extracted content (%d chars): %s...",
                 len(content) if content else 0,
-                content[:100] if content else "None"
+                content[:100] if content else "None",
             )
 
             # Extract actual player message from compound messages
@@ -273,10 +277,12 @@ class ClaudeSessionManager:
 
         # Find the newest Claude session file
         # Claude stores sessions in ~/.claude/projects/{encoded-path}/
-        project_name = str(session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+        project_name = (
+            str(session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+        )
         if not project_name.startswith("-"):
             project_name = "-" + project_name
-        
+
         claude_project_dir = Path.home() / ".claude" / "projects" / project_name
         if not claude_project_dir.exists():
             return {

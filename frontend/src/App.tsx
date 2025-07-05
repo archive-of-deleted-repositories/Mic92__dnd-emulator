@@ -27,7 +27,7 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Please create or select a session to begin your adventure.",
+      text: 'Please create or select a session to begin your adventure.',
       type: 'system',
     },
   ]);
@@ -68,7 +68,7 @@ function App() {
         diceRolls: data.dice_rolls,
       };
       setMessages((prev) => [...prev, newMessage]);
-      
+
       // Refresh sessions to update message counts
       loadSessions();
     });
@@ -194,7 +194,7 @@ function App() {
     // Load session messages if switching to an existing session
     if (sessionId) {
       // Check if this is an existing session
-      const existingSession = sessions.find(s => s.session_id === sessionId);
+      const existingSession = sessions.find((s) => s.session_id === sessionId);
       if (existingSession) {
         await loadSessionMessages(sessionId);
       } else {
@@ -212,7 +212,7 @@ function App() {
       setMessages([
         {
           id: '1',
-          text: "Please create or select a session to begin your adventure.",
+          text: 'Please create or select a session to begin your adventure.',
           type: 'system',
         },
       ]);

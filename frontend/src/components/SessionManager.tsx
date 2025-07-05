@@ -100,10 +100,14 @@ const SessionManager: React.FC<SessionManagerProps> = ({
           />
           <div className="button-group">
             <button onClick={handleCreateSession}>Create</button>
-            <button onClick={() => {
-              setShowNewSessionInput(false);
-              setNewSessionName('');
-            }}>Cancel</button>
+            <button
+              onClick={() => {
+                setShowNewSessionInput(false);
+                setNewSessionName('');
+              }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

@@ -18,7 +18,7 @@ class TestClaudeGM:
         # Clean up before test
         self._cleanup_test_sessions()
 
-        return
+        yield
 
     def _cleanup_test_sessions(self) -> None:
         """Remove test session directories."""
