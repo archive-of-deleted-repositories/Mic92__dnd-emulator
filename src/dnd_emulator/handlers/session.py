@@ -16,16 +16,14 @@ def handle_session_switch(data: dict[str, Any]) -> None:
     """Handle session switching requests."""
     session_id = data.get("session_id")
 
+    if not session_id:
+        emit("error", {"message": "Session name is required"})
+        return
+
     # Cast once at the beginning
     app = cast("DnDApp", current_app)
 
-    if session_id and app.session_manager.session_exists(session_id):
-        # This is a Claude session - tell the GM to use it
-        logger.info("Switching to Claude session: %s", session_id)
-        app.gm.set_session(session_id)
-        emit("session_switched", {"session_id": session_id})
-    else:
-        # New session (no specific Claude session)
-        logger.info("Starting new session")
-        app.gm.set_session(None)
-        emit("session_switched", {"session_id": None})
+    # Set the session for the GM (creates directory if needed)
+    logger.info("Switching to session: %s", session_id)
+    app.gm.set_session(session_id)
+    emit("session_switched", {"session_id": session_id})

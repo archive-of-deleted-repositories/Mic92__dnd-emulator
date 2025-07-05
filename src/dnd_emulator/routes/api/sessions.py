@@ -30,14 +30,18 @@ def register_session_routes(app: Flask) -> None:
         """Get details for a specific session."""
         app = cast("DnDApp", current_app)
         if app.session_manager.session_exists(session_id):
-            session_path = app.session_manager.get_session_file_path(session_id)
-            return jsonify(
-                {
-                    "session_id": session_id,
-                    "exists": True,
-                    "path": str(session_path),
-                },
-            ), 200
+            # Get session details
+            session_data = app.session_manager.get_session_with_messages(session_id)
+            if session_data:
+                return jsonify(
+                    {
+                        "session_id": session_id,
+                        "exists": True,
+                        "summary": session_data.get("summary", ""),
+                        "message_count": session_data.get("message_count", 0),
+                        "last_activity": session_data.get("last_activity", ""),
+                    },
+                ), 200
         return jsonify({"session_id": session_id, "exists": False}), 404
 
     @app.route("/api/sessions/<session_id>/messages")

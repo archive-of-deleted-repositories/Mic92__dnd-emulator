@@ -18,16 +18,22 @@ def handle_message(data: dict[str, Any]) -> None:
     message = data.get("message", "")
     session_id = data.get("session_id")
 
-    logger.info("Received message from session %s: %s", session_id or "new", message)
+    if not session_id:
+        emit(
+            "error",
+            {
+                "message": "No session selected. Create or select a session first.",
+            },
+        )
+        return
+
+    logger.info("Received message from session %s: %s", session_id, message)
 
     # Cast once at the beginning
     app = cast("DnDApp", current_app)
 
-    # Set the Claude session if provided
-    if session_id and app.session_manager.session_exists(session_id):
-        app.gm.set_session(session_id)
-    else:
-        app.gm.set_session(None)
+    # Set the session for the GM
+    app.gm.set_session(session_id)
 
     # Run async GM response in thread
     loop = asyncio.new_event_loop()

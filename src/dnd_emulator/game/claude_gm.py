@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -21,9 +22,20 @@ class ClaudeGM:
 
         """
         self.claude_path = claude_path
-        self.has_session = False  # Track if we have an active session
-        self.session_id: str | None = None  # Store session ID if available
+        self.session_id: str | None = None  # Store session ID for directory
+        self.claude_session_id: str | None = None  # Store Claude's session ID
+        self.has_sent_message = (
+            False  # Track if we've sent a message in current session
+        )
         self.logger = logging.getLogger(__name__)
+
+        # Set up base directory for sessions
+        xdg_data_home = os.environ.get(
+            "XDG_DATA_HOME",
+            str(Path.home() / ".local" / "share"),
+        )
+        self.sessions_dir = Path(xdg_data_home) / "dnd-emulator" / "sessions"
+        self.sessions_dir.mkdir(parents=True, exist_ok=True)
 
         # Load system prompt from file
         prompt_file = Path(__file__).parent / "gm_system_prompt.txt"
@@ -49,21 +61,29 @@ class ClaudeGM:
             else response
         )
         self.logger.info("GM response: %s", truncated)
+
+        # Mark that we've sent a message in this session
+        self.has_sent_message = True
+
         return response
 
     async def _execute_claude(self, prompt: str) -> str:
         """Execute claude CLI and return the response."""
         cmd = self._build_command(prompt)
 
-        if self.has_session:
-            self.logger.info("Continuing session %s", self.session_id)
-        else:
-            self.logger.info("Starting new Claude session")
+        # Each session runs in its own directory
+        if not self.session_id:
+            raise RuntimeError("No session ID set")
+
+        session_dir = self.sessions_dir / self.session_id
+        session_dir.mkdir(parents=True, exist_ok=True)
+        self.logger.info("Running in session directory: %s", session_dir)
 
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            cwd=str(session_dir),
         )
 
         response_parts = await self._read_streaming_response(process)
@@ -85,12 +105,11 @@ class ClaudeGM:
         """Build the command line arguments for Claude."""
         cmd = [self.claude_path]
 
-        # Add resume/continue flag based on session state
-        if self.session_id:
-            # Resume a specific Claude session
-            cmd.extend(["--resume", self.session_id])
-        elif self.has_session:
-            # Continue the most recent session
+        # Use --resume with session ID if we have one from a previous run
+        if self.claude_session_id and not self.has_sent_message:
+            cmd.extend(["--resume", self.claude_session_id])
+        # Use --continue for subsequent messages in the same process
+        elif self.has_sent_message:
             cmd.append("--continue")
 
         cmd.extend(
@@ -105,6 +124,11 @@ class ClaudeGM:
                 "stream-json",
                 prompt,
             ],
+        )
+
+        # Log the command for debugging
+        self.logger.info(
+            "Claude command: %s", " ".join(cmd[:3] + ["..."] if len(cmd) > 3 else cmd)
         )
 
         return cmd
@@ -131,15 +155,8 @@ class ClaudeGM:
         try:
             json_msg = json.loads(line_str)
 
-            # Check for session ID in init message
-            if json_msg.get("type") == "system" and json_msg.get("subtype") == "init":
-                if "session_id" in json_msg:
-                    self.session_id = json_msg["session_id"]
-                    self.has_session = True
-                    self.logger.debug("Session initialized: %s", self.session_id)
-
             # Extract text content from content messages
-            elif json_msg.get("type") == "content" and "text" in json_msg:
+            if json_msg.get("type") == "content" and "text" in json_msg:
                 parts.append(json_msg["text"])
 
             # Extract text from assistant messages
@@ -184,8 +201,8 @@ class ClaudeGM:
         For existing sessions, Claude maintains context so we only send the message.
         For new sessions, we include the system prompt to establish the context.
         """
-        # If we have an existing session, Claude already has the context
-        if self.has_session or self.session_id:
+        # If resuming an existing Claude session or continuing in same process
+        if self.has_sent_message or self.claude_session_id:
             return f"Player: {message}"
 
         # For new sessions, include system prompt
@@ -216,23 +233,55 @@ class ClaudeGM:
             ],
         }
 
-    def reset_session(self) -> None:
-        """Reset the session, forcing a new conversation on next message."""
-        if self.session_id:
-            self.logger.info("Resetting session %s", self.session_id)
-        self.has_session = False
-        self.session_id = None
-
-    def set_session(self, session_id: str | None) -> None:
-        """Set a specific Claude session to resume.
+    def set_session(self, session_name: str) -> None:
+        """Set the session to use.
 
         Args:
-            session_id: The Claude session ID to resume, or None for new session.
+            session_name: The session name (used as directory name).
 
         """
-        if session_id:
-            self.logger.info("Setting session to resume: %s", session_id)
-            self.session_id = session_id
-            self.has_session = False  # Will use --resume instead of --continue
-        else:
-            self.reset_session()
+        self.logger.info("Setting session: %s", session_name)
+        self.session_id = session_name
+        self.has_sent_message = False  # Reset for new session
+        
+        # Check if there's an existing Claude session for this directory
+        self.claude_session_id = self._find_claude_session_id()
+        if self.claude_session_id:
+            self.logger.info("Found existing Claude session: %s", self.claude_session_id)
+    
+    def _find_claude_session_id(self) -> str | None:
+        """Find the most recent Claude session ID for the current session directory."""
+        if not self.session_id:
+            return None
+            
+        # Claude stores sessions in ~/.claude/projects/ based on working directory
+        session_dir = self.sessions_dir / self.session_id
+        # Convert path to Claude's project directory naming
+        # Claude replaces "/" "_" and "." with "-"
+        project_name = str(session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+        # Claude keeps the leading dash
+        if not project_name.startswith("-"):
+            project_name = "-" + project_name
+            
+        claude_project_dir = Path.home() / ".claude" / "projects" / project_name
+        
+        self.logger.debug("Looking for Claude project dir: %s", claude_project_dir)
+        
+        if not claude_project_dir.exists():
+            self.logger.debug("Claude project dir does not exist")
+            return None
+            
+        # Find the most recent session file
+        session_files = list(claude_project_dir.glob("*.jsonl"))
+        if not session_files:
+            self.logger.debug("No session files found")
+            return None
+            
+        self.logger.debug("Found %d session files", len(session_files))
+        
+        # Get the most recent file
+        newest_file = max(session_files, key=lambda f: f.stat().st_mtime)
+        # The session ID is the filename without extension
+        session_id = newest_file.stem
+        self.logger.debug("Most recent session ID: %s", session_id)
+        return session_id
