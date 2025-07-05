@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './SessionManager.css';
 
 interface Session {
@@ -27,11 +27,26 @@ const SessionManager: React.FC<SessionManagerProps> = ({
   onRefreshSessions,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showNewSessionInput, setShowNewSessionInput] = useState(!currentSessionId);
+  const [newSessionName, setNewSessionName] = useState('');
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await onRefreshSessions();
     setTimeout(() => setIsRefreshing(false), 1000);
+  };
+
+  // Update showNewSessionInput when currentSessionId changes
+  useEffect(() => {
+    setShowNewSessionInput(!currentSessionId);
+  }, [currentSessionId]);
+
+  const handleCreateSession = () => {
+    if (newSessionName.trim()) {
+      onSwitchSession(newSessionName.trim());
+      setNewSessionName('');
+      setShowNewSessionInput(false);
+    }
   };
 
   const truncateSummary = (summary: string, maxLength: number = 30) => {
@@ -46,7 +61,13 @@ const SessionManager: React.FC<SessionManagerProps> = ({
         <select
           id="session-select"
           value={currentSessionId || ''}
-          onChange={(e) => onSwitchSession(e.target.value || null)}
+          onChange={(e) => {
+            if (e.target.value === '') {
+              setShowNewSessionInput(true);
+            } else {
+              onSwitchSession(e.target.value);
+            }
+          }}
         >
           <option value="">New Session</option>
           {sessions.map((session) => (
@@ -63,6 +84,29 @@ const SessionManager: React.FC<SessionManagerProps> = ({
           {isRefreshing ? '✓' : '↻'}
         </button>
       </div>
+      {showNewSessionInput && (
+        <div className="new-session-input">
+          <input
+            type="text"
+            placeholder="Enter session name..."
+            value={newSessionName}
+            onChange={(e) => setNewSessionName(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleCreateSession();
+              }
+            }}
+            autoFocus
+          />
+          <div className="button-group">
+            <button onClick={handleCreateSession}>Create</button>
+            <button onClick={() => {
+              setShowNewSessionInput(false);
+              setNewSessionName('');
+            }}>Cancel</button>
+          </div>
+        </div>
+      )}
       <p>
         Session:{' '}
         <span id="session-id">

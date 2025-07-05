@@ -33,9 +33,15 @@ class ClaudeSessionManager:
             if not session_dir.is_dir():
                 continue
 
-            # Find the newest Claude session file in this directory
-            claude_sessions_dir = session_dir / ".claude" / "sessions"
-            if not claude_sessions_dir.exists():
+            # Find the newest Claude session file
+            # Claude stores sessions in ~/.claude/projects/{encoded-path}/
+            # where the path is encoded by replacing "/" "_" and "." with "-"
+            project_name = str(session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+            if not project_name.startswith("-"):
+                project_name = "-" + project_name
+            
+            claude_project_dir = Path.home() / ".claude" / "projects" / project_name
+            if not claude_project_dir.exists():
                 # No Claude sessions yet in this directory
                 sessions.append(
                     {
@@ -52,7 +58,7 @@ class ClaudeSessionManager:
                 continue
 
             # Find the newest JSONL file
-            jsonl_files = list(claude_sessions_dir.glob("*.jsonl"))
+            jsonl_files = list(claude_project_dir.glob("*.jsonl"))
             if not jsonl_files:
                 continue
 
@@ -266,8 +272,13 @@ class ClaudeSessionManager:
             return None
 
         # Find the newest Claude session file
-        claude_sessions_dir = session_dir / ".claude" / "sessions"
-        if not claude_sessions_dir.exists():
+        # Claude stores sessions in ~/.claude/projects/{encoded-path}/
+        project_name = str(session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+        if not project_name.startswith("-"):
+            project_name = "-" + project_name
+        
+        claude_project_dir = Path.home() / ".claude" / "projects" / project_name
+        if not claude_project_dir.exists():
             return {
                 "session_id": session_id,
                 "summary": f"Session: {session_id}",
@@ -280,7 +291,7 @@ class ClaudeSessionManager:
                 "messages": [],
             }
 
-        jsonl_files = list(claude_sessions_dir.glob("*.jsonl"))
+        jsonl_files = list(claude_project_dir.glob("*.jsonl"))
         if not jsonl_files:
             return None
 

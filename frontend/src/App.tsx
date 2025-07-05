@@ -27,8 +27,8 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Welcome to the adventure! Describe your character and let's begin...",
-      type: 'gm',
+      text: "Please create or select a session to begin your adventure.",
+      type: 'system',
     },
   ]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -68,6 +68,9 @@ function App() {
         diceRolls: data.dice_rolls,
       };
       setMessages((prev) => [...prev, newMessage]);
+      
+      // Refresh sessions to update message counts
+      loadSessions();
     });
 
     socket.on('error', (data) => {
@@ -190,14 +193,27 @@ function App() {
 
     // Load session messages if switching to an existing session
     if (sessionId) {
-      await loadSessionMessages(sessionId);
+      // Check if this is an existing session
+      const existingSession = sessions.find(s => s.session_id === sessionId);
+      if (existingSession) {
+        await loadSessionMessages(sessionId);
+      } else {
+        // New named session - show welcome message
+        setMessages([
+          {
+            id: '1',
+            text: "Welcome to the adventure! Describe your character and let's begin...",
+            type: 'gm',
+          },
+        ]);
+      }
     } else {
-      // For new sessions, show the welcome message
+      // No session selected
       setMessages([
         {
           id: '1',
-          text: "Welcome to the adventure! Describe your character and let's begin...",
-          type: 'gm',
+          text: "Please create or select a session to begin your adventure.",
+          type: 'system',
         },
       ]);
     }

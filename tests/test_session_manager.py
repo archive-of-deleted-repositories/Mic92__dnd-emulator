@@ -25,22 +25,30 @@ class TestClaudeSessionManager:
         return sessions_dir
 
     @pytest.fixture
-    def mock_claude_project_dir(self, test_sessions_dir: Path) -> Path:
+    def mock_claude_project_dir(self, test_sessions_dir: Path, tmp_path: Path) -> Path:
         """Set up mock Claude session directory with our test assets."""
-        # Create the .claude/sessions directory inside the test session
+        # Create a mock ~/.claude/projects/ directory structure
+        mock_claude_home = tmp_path / ".claude" / "projects"
+        mock_claude_home.mkdir(parents=True)
+        
+        # Create the encoded project directory path
         test_session_dir = test_sessions_dir / "test_dnd_adventure"
-        claude_sessions_dir = test_session_dir / ".claude" / "sessions"
-        claude_sessions_dir.mkdir(parents=True)
+        project_name = str(test_session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+        if not project_name.startswith("-"):
+            project_name = "-" + project_name
+        
+        claude_project_dir = mock_claude_home / project_name
+        claude_project_dir.mkdir(parents=True)
 
         # Copy our test session files
         assets_dir = Path(__file__).parent / "assets" / "claude_sessions"
         files_copied = 0
         for session_file in assets_dir.glob("*.jsonl"):
-            shutil.copy(session_file, claude_sessions_dir)
+            shutil.copy(session_file, claude_project_dir)
             files_copied += 1
-        print(f"Copied {files_copied} files to {claude_sessions_dir}")
+        print(f"Copied {files_copied} files to {claude_project_dir}")
 
-        return claude_sessions_dir
+        return claude_project_dir
 
     @pytest.fixture
     def session_manager(
@@ -48,11 +56,14 @@ class TestClaudeSessionManager:
         test_sessions_dir: Path,
         mock_claude_project_dir: Path,
         monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
     ) -> ClaudeSessionManager:
         """Create a session manager with test data."""
         manager = ClaudeSessionManager()
         # Monkey patch the sessions directory
         monkeypatch.setattr(manager, "sessions_dir", test_sessions_dir)
+        # Monkey patch Path.home() to return our temp directory
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
         return manager
 
     def test_list_and_parse_sessions(
