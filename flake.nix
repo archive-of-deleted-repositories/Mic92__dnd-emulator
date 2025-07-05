@@ -81,7 +81,7 @@
               echo ""
               echo "Commands:"
               echo "  uv sync          - Install dependencies"
-              echo "  uv run python app.py - Run the app"
+              echo "  uv run python -m dnd_emulator - Run the app"
               echo "  treefmt          - Format all files"
               echo "  ruff check .     - Lint Python code"
               echo "  mypy .           - Type check Python code"

@@ -1,6 +1,7 @@
 """Main Flask application for D&D Emulator."""
 
 import asyncio
+import logging
 import os
 import random
 from typing import Any
@@ -10,10 +11,17 @@ from flask import Flask, render_template
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 
-from game.claude_gm import ClaudeGM
+from dnd_emulator.game.claude_gm import ClaudeGM
 
 # Load environment variables
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -25,8 +33,10 @@ CORS(app)
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
+# Initialize Claude GM
+gm = ClaudeGM()
+
 # Game sessions storage (in-memory for now)
-# Each session will have its own GM instance
 game_sessions: dict[str, dict[str, Any]] = {}
 
 
@@ -39,12 +49,14 @@ def index() -> str:
 @socketio.on("connect")
 def handle_connect() -> None:
     """Handle client connection."""
+    logger.info("Client connected")
     emit("connected", {"status": "Connected to D&D Emulator"})
 
 
 @socketio.on("disconnect")
 def handle_disconnect() -> None:
     """Handle client disconnection."""
+    logger.info("Client disconnected")
     # Note: In production, you'd want to track which session_id belongs to which client
     # and clean up the GM instance when the last client disconnects
 
@@ -55,8 +67,11 @@ def handle_message(data: dict[str, Any]) -> None:
     message = data.get("message", "")
     session_id = data.get("session_id", "default")
 
+    logger.info("Received message from session %s: %s", session_id, message)
+
     # Get or create session
     if session_id not in game_sessions:
+        logger.info("Creating new game session: %s", session_id)
         game_sessions[session_id] = {
             "history": [],
             "game_state": {
@@ -64,11 +79,9 @@ def handle_message(data: dict[str, Any]) -> None:
                 "current_scene": "Tavern",
                 "initiative_order": [],
             },
-            "gm": ClaudeGM(),  # Create GM instance for this session
         }
 
     session = game_sessions[session_id]
-    gm = session["gm"]
 
     # Add message to history
     session["history"].append(f"Player: {message}")
@@ -145,20 +158,3 @@ def handle_dice_roll(data: dict[str, Any]) -> None:
         emit("error", {"message": f"Invalid dice notation: {e!s}"})
 
 
-async def cleanup_sessions() -> None:
-    """Clean up all GM sessions."""
-    for session in game_sessions.values():
-        if "gm" in session:
-            await session["gm"].stop_session()
-
-
-if __name__ == "__main__":
-    try:
-        socketio.run(
-            app, debug=True, host="127.0.0.1", port=5000, allow_unsafe_werkzeug=True,
-        )
-    finally:
-        # Clean up sessions on shutdown
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(cleanup_sessions())
-        loop.close()

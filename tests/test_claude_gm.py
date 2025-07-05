@@ -2,7 +2,7 @@
 
 import pytest
 
-from game.claude_gm import ClaudeGM
+from dnd_emulator.game.claude_gm import ClaudeGM
 
 
 class TestClaudeGM:
@@ -20,6 +20,9 @@ class TestClaudeGM:
         gm: ClaudeGM,
     ) -> None:
         """Test sending a simple message without context."""
+        # Reset session to ensure clean state
+        gm.reset_session()
+
         # Send a simple test message
         response = await gm.send_message(
             "Reply with exactly: 'Hello from Claude GM'",
@@ -29,6 +32,10 @@ class TestClaudeGM:
         # Verify we got a response
         assert isinstance(response, str)
         assert len(response) > 0
+
+        # Verify session was established
+        assert gm.has_session
+        assert gm.session_id is not None
 
     @pytest.mark.asyncio
     async def test_send_message_with_context(
@@ -60,4 +67,7 @@ class TestClaudeGM:
         assert len(response) > 0
 
         # Parse for dice rolls
-        gm.parse_dice_rolls(response)
+        parsed = gm.parse_dice_rolls(response)
+        assert "response" in parsed
+        assert "dice_rolls" in parsed
+        assert isinstance(parsed["dice_rolls"], list)
