@@ -57,6 +57,7 @@ ignore = [
     "S603",  # Allow subprocess with shell=False (PATH lookups)
     "D203",  # incorrect-blank-line-before-class (conflicts with D211)
     "D213",  # multi-line-summary-second-line (conflicts with D212)
+    "COM812",  # Conflicts with ruff formatter
 ]
 
 [tool.ruff.lint.mccabe]
