@@ -29,39 +29,18 @@ def handle_message(data: dict[str, Any]) -> None:
     else:
         app.gm.set_session(None)
 
-    # Get or create game session context (use session_id or "new" as key)
-    session_key = session_id or "new"
-    if session_key not in app.game_sessions:
-        logger.info("Creating new game session context: %s", session_key)
-        app.game_sessions[session_key] = {
-            "history": [],
-            "game_state": {
-                "players": [],
-                "current_scene": "Tavern",
-                "initiative_order": [],
-            },
-        }
-
-    session = app.game_sessions[session_key]
-
-    # Add message to history
-    session["history"].append(f"Player: {message}")
-
     # Run async GM response in thread
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
     try:
-        # Get GM response
+        # Get GM response - Claude maintains all context and history
         gm_response = loop.run_until_complete(
-            app.gm.send_message(message, context=session),
+            app.gm.send_message(message, context=None),
         )
 
         # Parse for dice rolls
         parsed_response = app.gm.parse_dice_rolls(gm_response)
-
-        # Add to history
-        session["history"].append(f"GM: {gm_response}")
 
         # Emit response
         emit(

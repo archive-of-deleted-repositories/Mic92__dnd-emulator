@@ -89,76 +89,110 @@ class ClaudeSessionManager:
         if not lines:
             return None
 
-        # Parse the first line for summary
-        try:
-            first_line = json.loads(lines[0])
-            summary = first_line.get("summary", "No summary available")
-        except json.JSONDecodeError:
-            summary = "No summary available"
+        # Initialize session data
+        summary = self._extract_summary(lines[0])
 
-        # Find first and last user messages
-        first_message = None
-        last_activity = None
-        message_count = 0
-        messages = []
+        # Process all entries
+        parsed_data = self._process_session_entries(lines)
 
-        for line in lines:
-            try:
-                entry = json.loads(line)
-
-                # Count messages and extract content
-                if entry.get("type") in ["user", "assistant"]:
-                    message_count += 1
-
-                    # Extract message data
-                    message_data = entry.get("message", {})
-                    if message_data.get("role") in ["user", "assistant"]:
-                        content = self._extract_message_content(
-                            message_data.get("content", ""),
-                        )
-
-                        messages.append({
-                            "role": message_data.get("role"),
-                            "content": content,
-                            "timestamp": entry.get("timestamp", ""),
-                            "uuid": entry.get("uuid", ""),
-                        })
-
-                # Track timestamps
-                if "timestamp" in entry:
-                    timestamp = datetime.fromisoformat(
-                        entry["timestamp"],
-                    )
-                    if last_activity is None or timestamp > last_activity:
-                        last_activity = timestamp
-
-                # Find first user message content
-                if (
-                    entry.get("type") == "user"
-                    and first_message is None
-                    and entry.get("message", {}).get("content")
-                ):
-                    raw_content = entry["message"]["content"]
-                    content = self._extract_message_content(raw_content)
-                    first_message = self._extract_player_message(content)
-
-            except (json.JSONDecodeError, KeyError, ValueError):
-                continue
-
-        # Get file creation time if no timestamp found
-        if last_activity is None:
-            stat = session_file.stat()
-            last_activity = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+        # Get last activity time
+        last_activity = parsed_data["last_activity"] or self._get_file_mtime(
+            session_file
+        )
 
         return {
             "session_id": session_id,
             "summary": summary,
-            "first_message": first_message or "No messages",
-            "message_count": message_count,
+            "first_message": parsed_data["first_message"] or "No messages",
+            "message_count": parsed_data["message_count"],
             "last_activity": last_activity.isoformat(),
             "file_path": str(session_file),
-            "messages": messages,
+            "messages": parsed_data["messages"],
         }
+
+    def _extract_summary(self, first_line: str) -> str:
+        """Extract summary from the first line of session file."""
+        try:
+            data = json.loads(first_line)
+            return data.get("summary", "No summary available")
+        except json.JSONDecodeError:
+            return "No summary available"
+
+    def _get_file_mtime(self, file_path: Path) -> datetime:
+        """Get file modification time as datetime."""
+        stat = file_path.stat()
+        return datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+
+    def _process_session_entries(self, lines: list[str]) -> dict[str, Any]:
+        """Process all entries in a session file."""
+        result = {
+            "first_message": None,
+            "last_activity": None,
+            "message_count": 0,
+            "messages": [],
+        }
+
+        for line in lines:
+            try:
+                entry = json.loads(line)
+                self._process_single_entry(entry, result)
+            except (json.JSONDecodeError, KeyError, ValueError):
+                continue
+
+        return result
+
+    def _process_single_entry(
+        self, entry: dict[str, Any], result: dict[str, Any]
+    ) -> None:
+        """Process a single entry from the session file."""
+        # Handle messages
+        if entry.get("type") in ["user", "assistant"]:
+            result["message_count"] += 1
+            self._extract_and_append_message(entry, result["messages"])
+
+            # Find first user message
+            if entry.get("type") == "user" and result["first_message"] is None:
+                self._set_first_user_message(entry, result)
+
+        # Track timestamps
+        self._update_last_activity(entry, result)
+
+    def _extract_and_append_message(
+        self, entry: dict[str, Any], messages: list[dict[str, Any]]
+    ) -> None:
+        """Extract message data and append to messages list."""
+        message_data = entry.get("message", {})
+        if message_data.get("role") in ["user", "assistant"]:
+            content = self._extract_message_content(
+                message_data.get("content", ""),
+            )
+
+            messages.append(
+                {
+                    "role": message_data.get("role"),
+                    "content": content,
+                    "timestamp": entry.get("timestamp", ""),
+                    "uuid": entry.get("uuid", ""),
+                }
+            )
+
+    def _set_first_user_message(
+        self, entry: dict[str, Any], result: dict[str, Any]
+    ) -> None:
+        """Set the first user message in the result."""
+        message_content = entry.get("message", {}).get("content")
+        if message_content:
+            content = self._extract_message_content(message_content)
+            result["first_message"] = self._extract_player_message(content)
+
+    def _update_last_activity(
+        self, entry: dict[str, Any], result: dict[str, Any]
+    ) -> None:
+        """Update last activity timestamp."""
+        if "timestamp" in entry:
+            timestamp = datetime.fromisoformat(entry["timestamp"])
+            if result["last_activity"] is None or timestamp > result["last_activity"]:
+                result["last_activity"] = timestamp
 
     def get_session_file_path(self, session_id: str) -> Path | None:
         """Get the file path for a specific session ID."""

@@ -1,7 +1,5 @@
 """Type definitions for the Flask app."""
 
-from typing import Any
-
 from flask import Flask
 
 from dnd_emulator.game.claude_gm import ClaudeGM
@@ -13,4 +11,3 @@ class DnDApp(Flask):
 
     gm: ClaudeGM
     session_manager: ClaudeSessionManager
-    game_sessions: dict[str, dict[str, Any]]

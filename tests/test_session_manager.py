@@ -81,38 +81,38 @@ class TestClaudeSessionManager:
     ) -> None:
         """Test getting a session with its messages."""
         sessions = session_manager.list_sessions()
-        
+
         # Ensure we have at least one session to test
         assert len(sessions) > 0, "Need at least one session to test"
-        
+
         # Get the first session with messages
         session_id = sessions[0]["session_id"]
         session_data = session_manager.get_session_with_messages(session_id)
-        
+
         assert session_data is not None
         assert session_data["session_id"] == session_id
         assert "messages" in session_data
-        
+
         # Verify messages structure
         messages = session_data["messages"]
         assert isinstance(messages, list)
-        
+
         for message in messages:
             assert "role" in message
             assert "content" in message
             assert "timestamp" in message
             assert "uuid" in message
-            
+
             # Role should be either user or assistant
             assert message["role"] in ["user", "assistant"]
-            
+
             # Content should be a non-empty string
             assert isinstance(message["content"], str)
             assert len(message["content"]) > 0
-        
+
         # Number of messages should match message_count
         assert len(messages) == session_data["message_count"]
-        
+
     def test_get_non_existent_session_with_messages(
         self,
         session_manager: ClaudeSessionManager,

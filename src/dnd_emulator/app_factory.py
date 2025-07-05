@@ -40,6 +40,5 @@ def create_app() -> tuple[DnDApp, SocketIO]:
     # Initialize game components and store in app context
     app.gm = ClaudeGM()
     app.session_manager = ClaudeSessionManager()
-    app.game_sessions = {}  # In-memory game sessions
 
     return app, socketio

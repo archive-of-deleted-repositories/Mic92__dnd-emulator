@@ -179,20 +179,21 @@ class ClaudeGM:
         return parts
 
     def _build_prompt(self, message: str, context: dict[str, Any] | None) -> str:
-        """Build the full prompt including system prompt and context."""
+        """Build the prompt for Claude.
+
+        For existing sessions, Claude maintains context so we only send the message.
+        For new sessions, we include the system prompt to establish the context.
+        """
+        # If we have an existing session, Claude already has the context
+        if self.has_session or self.session_id:
+            return f"Player: {message}"
+
+        # For new sessions, include system prompt
         parts = [f"System: {self.system_prompt}"]
 
-        if context:
-            # Add game state context
-            if "game_state" in context:
-                parts.append(f"Current Game State: {json.dumps(context['game_state'])}")
-
-            # Add recent history
-            if "history" in context:
-                parts.append("Recent History:")
-                parts.extend(
-                    f"- {entry}" for entry in context["history"][-5:]
-                )  # Last 5 messages
+        # Add initial game state if provided
+        if context and "game_state" in context:
+            parts.append(f"Current Game State: {json.dumps(context['game_state'])}")
 
         parts.append(f"Player: {message}")
         parts.append("GM:")
