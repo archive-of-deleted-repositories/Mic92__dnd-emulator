@@ -2,6 +2,8 @@
 
 A web-based Dungeons & Dragons emulator with Claude as the Game Master.
 
+![D&D Emulator Screenshot](https://github.com/Mic92/dnd-emulator/releases/download/assets/dnd-webview.png)
+
 ## Features
 
 - Interactive D&D gameplay with Claude AI as the Game Master
