@@ -51,4 +51,36 @@ This project uses Nix flakes for development environment management.
 
 - **Backend**: Python Flask with Flask-SocketIO for WebSocket support
 - **Claude Integration**: CLI wrapper for Claude as Game Master
-- **Frontend**: HTML/CSS/JavaScript with Socket.IO client
+- **Frontend**: React TypeScript application with Socket.IO client
+
+## Frontend Development
+
+The frontend is a React TypeScript application located in the `frontend/` directory.
+
+### Setup
+
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the development server (runs on port 3000):
+   ```bash
+   npm run dev
+   ```
+
+### Production Build
+
+To build the frontend for production:
+
+```bash
+cd frontend
+npm run build
+```
+
+This creates a production build in `static/dist/` that will be automatically served by Flask.
