@@ -34,4 +34,3 @@ processes:
 
 log_level: info
 log_length: 1000
-disable_dotenv: false

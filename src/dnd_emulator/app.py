@@ -2,14 +2,9 @@
 
 import logging
 
-from dotenv import load_dotenv
-
 from dnd_emulator.app_factory import create_app
 from dnd_emulator.routes import register_routes
 from dnd_emulator.socket_handlers import register_socket_handlers
-
-# Load environment variables
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(
