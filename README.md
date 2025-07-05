@@ -38,15 +38,14 @@ This project uses Nix flakes for development environment management.
 - **uv**: Python package management
 - **ruff**: Python linting and formatting
 - **mypy**: Python type checking
-- **treefmt**: Multi-language code formatting
 
 ### Commands
 
 - `uv sync` - Install dependencies
 - `uv run python app.py` - Run the app
-- `treefmt` - Format all files
-- `ruff check .` - Lint Python code
-- `mypy .` - Type check Python code
+- `ruff check --fix --unsafe-fixes .` - Lint Python code
+- `ruff format .` - Format python code
+- `uv run mypy .` - Type check Python code
 
 ## Architecture
 

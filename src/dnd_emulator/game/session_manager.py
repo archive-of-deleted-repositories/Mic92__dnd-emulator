@@ -1,0 +1,153 @@
+"""Session manager for Claude CLI sessions."""
+
+import json
+import logging
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+class ClaudeSessionManager:
+    """Manages Claude CLI session files."""
+
+    def __init__(self, project_path: str | None = None) -> None:
+        """Initialize the session manager.
+
+        Args:
+            project_path: Path to the project. If None, uses current working directory.
+
+        """
+        self.project_path = Path(project_path or Path.cwd())
+        self.claude_dir = Path.home() / ".claude"
+        self.project_sessions_dir = self._get_project_sessions_dir()
+
+    def _get_project_sessions_dir(self) -> Path:
+        """Get the Claude sessions directory for this project."""
+        # Claude encodes the project path by replacing / with -
+        encoded_path = str(self.project_path).replace("/", "-")
+        return self.claude_dir / "projects" / encoded_path
+
+    def list_sessions(self) -> list[dict[str, Any]]:
+        """List all available Claude sessions for this project."""
+        sessions: list[dict[str, Any]] = []
+
+        if not self.project_sessions_dir.exists():
+            logger.warning(
+                "No Claude sessions directory found at %s", self.project_sessions_dir,
+            )
+            return sessions
+
+        # Find all JSONL files in the project sessions directory
+        for session_file in self.project_sessions_dir.glob("*.jsonl"):
+            try:
+                session_info = self._parse_session_file(session_file)
+                if session_info:
+                    sessions.append(session_info)
+            except (json.JSONDecodeError, OSError) as e:
+                logger.exception(
+                    "Error parsing session file %s", session_file,
+                )
+
+        # Sort by last activity (most recent first)
+        sessions.sort(key=lambda s: s["last_activity"], reverse=True)
+        return sessions
+
+    def _extract_message_content(self, content: str | list[dict[str, Any]]) -> str:
+        """Extract text content from Claude message format."""
+        if isinstance(content, str):
+            return content
+
+        if isinstance(content, list):
+            text_parts = [
+                item.get("text", "")
+                for item in content
+                if isinstance(item, dict) and item.get("type") == "text"
+            ]
+            return " ".join(text_parts)
+
+        return ""
+
+    def _extract_player_message(self, content: str) -> str:
+        """Extract player message from formatted content."""
+        if "Player:" in content:
+            player_part = (
+                content.split("Player:")[-1].split("\n")[0].strip()
+            )
+            return player_part[:100]  # Truncate long messages
+        return content[:100]
+
+    def _parse_session_file(self, session_file: Path) -> dict[str, Any] | None:
+        """Parse a Claude session JSONL file to extract session info."""
+        session_id = session_file.stem  # Filename without .jsonl extension
+
+        # Read the file line by line
+        lines = session_file.read_text(encoding="utf-8").strip().split("\n")
+        if not lines:
+            return None
+
+        # Parse the first line for summary
+        try:
+            first_line = json.loads(lines[0])
+            summary = first_line.get("summary", "No summary available")
+        except json.JSONDecodeError:
+            summary = "No summary available"
+
+        # Find first and last user messages
+        first_message = None
+        last_activity = None
+        message_count = 0
+
+        for line in lines:
+            try:
+                entry = json.loads(line)
+
+                # Count messages
+                if entry.get("type") in ["user", "assistant"]:
+                    message_count += 1
+
+                # Track timestamps
+                if "timestamp" in entry:
+                    timestamp = datetime.fromisoformat(
+                        entry["timestamp"],
+                    )
+                    if last_activity is None or timestamp > last_activity:
+                        last_activity = timestamp
+
+                # Find first user message content
+                if (
+                    entry.get("type") == "user"
+                    and first_message is None
+                    and entry.get("message", {}).get("content")
+                ):
+                    raw_content = entry["message"]["content"]
+                    content = self._extract_message_content(raw_content)
+                    first_message = self._extract_player_message(content)
+
+            except (json.JSONDecodeError, KeyError, ValueError):
+                continue
+
+        # Get file creation time if no timestamp found
+        if last_activity is None:
+            stat = session_file.stat()
+            last_activity = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
+
+        return {
+            "session_id": session_id,
+            "summary": summary,
+            "first_message": first_message or "No messages",
+            "message_count": message_count,
+            "last_activity": last_activity.isoformat(),
+            "file_path": str(session_file),
+        }
+
+    def get_session_file_path(self, session_id: str) -> Path | None:
+        """Get the file path for a specific session ID."""
+        session_file = self.project_sessions_dir / f"{session_id}.jsonl"
+        return session_file if session_file.exists() else None
+
+    def session_exists(self, session_id: str) -> bool:
+        """Check if a session exists."""
+        return self.get_session_file_path(session_id) is not None
+

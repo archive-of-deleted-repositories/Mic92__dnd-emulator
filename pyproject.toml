@@ -86,7 +86,5 @@ module = [
     "dotenv",
     "flask_cors",
     "flask_socketio",
-    "flask",
-    "pytest",
 ]
 ignore_missing_imports = true
