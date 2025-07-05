@@ -36,6 +36,12 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const socketRef = useRef<Socket | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+
+  // Keep sessionIdRef in sync with currentSessionId
+  useEffect(() => {
+    sessionIdRef.current = currentSessionId;
+  }, [currentSessionId]);
 
   useEffect(() => {
     // Initialize Socket.IO connection
@@ -94,6 +100,12 @@ function App() {
         type: 'player',
       };
       setMessages((prev) => [...prev, diceMessage]);
+
+      // Also send the dice roll to the GM
+      socketRef.current?.emit('send_message', {
+        message: `I rolled ${rollText}`,
+        session_id: sessionIdRef.current,
+      });
     });
 
     // Load sessions on mount
@@ -136,7 +148,10 @@ function App() {
 
   const rollDice = (notation: string) => {
     if (!socketRef.current) return;
-    socketRef.current.emit('roll_dice', { notation });
+    socketRef.current.emit('roll_dice', {
+      notation,
+      session_id: currentSessionId,
+    });
   };
 
   const loadSessionMessages = async (sessionId: string) => {
