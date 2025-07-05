@@ -1,0 +1,37 @@
+version: "0.5"
+
+processes:
+  setup:
+    command: "npm --prefix frontend install"
+    is_oneshot: true
+
+  backend:
+    command: "uv run python -m dnd_emulator"
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        port: 5000
+        path: /api/sessions
+    availability:
+      restart: "on_failure"
+    environment:
+      - "FLASK_ENV=development"
+    log_location: backend.log
+    depends_on:
+      setup:
+        condition: process_completed_successfully
+
+  frontend:
+    command: "npm --prefix frontend run dev"
+    availability:
+      restart: "on_failure"
+    depends_on:
+      setup:
+        condition: process_completed_successfully
+      backend:
+        condition: process_healthy
+    log_location: frontend.log
+
+log_level: info
+log_length: 1000
+disable_dotenv: false

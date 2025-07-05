@@ -1,2 +1,5 @@
 game/__pycache__
 __pycache__
+frontend/node_modules
+backend.log
+frontend.log

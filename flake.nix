@@ -26,6 +26,10 @@
 
               # For Claude CLI
               claude-code
+
+              # For running development servers
+              pkgs.process-compose
+              pkgs.nodejs
             ];
 
             shellHook = ''
@@ -34,7 +38,7 @@
               echo ""
               echo "Commands:"
               echo "  uv sync                            - Install dependencies"
-              echo "  uv run python -m dnd_emulator      - Run the app"
+              echo "  nix develop -c process-compose     - Run the app (both backend and frontend)"
               echo "  ruff format .                      - Format all files"
               echo "  ruff check --fix --unsafe-fixes .  - Lint Python code"
               echo "  nix develop -c uv run mypy .       - Type check Python code"

@@ -22,16 +22,26 @@ This project uses Nix flakes for development environment management.
    nix develop
    ```
 
-2. Install Python dependencies:
+2. Install dependencies:
 
    ```bash
-   uv sync
+   uv sync                        # Python dependencies
+   npm --prefix frontend install  # Frontend dependencies (creates package-lock.json)
    ```
 
-3. Run the application:
-   ```bash
-   uv run python app.py
-   ```
+### Running the Application
+
+Run both the backend and frontend development servers with a single command:
+
+```bash
+nix develop -c process-compose
+```
+
+This starts:
+- Backend (Flask) on http://localhost:5000
+- Frontend (React) on http://localhost:3000
+
+The frontend development server automatically proxies API requests to the backend.
 
 ### Tools
 
@@ -42,7 +52,7 @@ This project uses Nix flakes for development environment management.
 ### Commands
 
 - `uv sync` - Install dependencies
-- `uv run python app.py` - Run the app
+- `nix develop -c process-compose` - Run the app (both backend and frontend)
 - `ruff check --fix --unsafe-fixes .` - Lint Python code
 - `ruff format .` - Format python code
 - `uv run mypy .` - Type check Python code
@@ -67,11 +77,6 @@ The frontend is a React TypeScript application located in the `frontend/` direct
 2. Install dependencies:
    ```bash
    npm install
-   ```
-
-3. Start the development server (runs on port 3000):
-   ```bash
-   npm run dev
    ```
 
 ### Production Build
