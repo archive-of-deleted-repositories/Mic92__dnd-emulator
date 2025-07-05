@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './SessionManager.css';
 
 interface Session {
   session_id: string;
@@ -54,10 +53,12 @@ const SessionManager: React.FC<SessionManagerProps> = ({
   };
 
   return (
-    <div className="game-info">
-      <h3>Session Info</h3>
-      <div className="session-selector">
-        <label htmlFor="session-select">Session:</label>
+    <div className="bg-dnd-dark-secondary rounded-lg p-5 shadow-lg">
+      <h3 className="text-dnd-gold mb-4 text-lg font-bold">Session Info</h3>
+      <div className="flex gap-2 items-center mb-2">
+        <label htmlFor="session-select" className="font-bold">
+          Session:
+        </label>
         <select
           id="session-select"
           value={currentSessionId || ''}
@@ -68,6 +69,7 @@ const SessionManager: React.FC<SessionManagerProps> = ({
               onSwitchSession(e.target.value);
             }
           }}
+          className="flex-1 p-1 bg-dnd-dark-tertiary border border-gray-700 rounded text-dnd-text text-sm overflow-hidden text-ellipsis"
         >
           <option value="">New Session</option>
           {sessions.map((session) => (
@@ -80,12 +82,16 @@ const SessionManager: React.FC<SessionManagerProps> = ({
             </option>
           ))}
         </select>
-        <button className="refresh-button" onClick={handleRefresh} title="Refresh sessions">
+        <button
+          className="p-1 px-2 bg-dnd-player border border-gray-700 rounded text-dnd-text cursor-pointer text-base transition-colors hover:bg-blue-800"
+          onClick={handleRefresh}
+          title="Refresh sessions"
+        >
           {isRefreshing ? '✓' : '↻'}
         </button>
       </div>
       {showNewSessionInput && (
-        <div className="new-session-input">
+        <div className="flex flex-col gap-2 mt-2 mb-2">
           <input
             type="text"
             placeholder="Enter session name..."
@@ -97,29 +103,36 @@ const SessionManager: React.FC<SessionManagerProps> = ({
               }
             }}
             autoFocus
+            className="w-full p-1 bg-dnd-dark-tertiary border border-gray-700 rounded text-dnd-text text-sm"
           />
-          <div className="button-group">
-            <button onClick={handleCreateSession}>Create</button>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={handleCreateSession}
+              className="px-4 py-1 bg-dnd-player border border-gray-700 rounded text-dnd-text cursor-pointer text-sm transition-colors hover:bg-blue-800 whitespace-nowrap"
+            >
+              Create
+            </button>
             <button
               onClick={() => {
                 setShowNewSessionInput(false);
                 setNewSessionName('');
               }}
+              className="px-4 py-1 bg-dnd-player border border-gray-700 rounded text-dnd-text cursor-pointer text-sm transition-colors hover:bg-blue-800 whitespace-nowrap"
             >
               Cancel
             </button>
           </div>
         </div>
       )}
-      <p>
+      <p className="mb-2 overflow-hidden text-ellipsis whitespace-nowrap">
         Session:{' '}
-        <span id="session-id">
+        <span className="text-dnd-blue font-bold text-xs font-mono">
           {currentSessionId ? `${currentSessionId.substring(0, 8)}...` : 'New'}
         </span>
       </p>
-      <p>
+      <p className="mb-2 overflow-hidden text-ellipsis whitespace-nowrap">
         Status:{' '}
-        <span id="connection-status" className={isConnected ? 'connected' : 'disconnected'}>
+        <span className={`font-bold ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
           {connectionStatus}
         </span>
       </p>

@@ -1,19 +1,26 @@
-/* Global Styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@import "tailwindcss";
+
+@theme {
+  --color-dnd-gold: #d4af37;
+  --color-dnd-dark: #1a1a1a;
+  --color-dnd-dark-secondary: #2a2a2a;
+  --color-dnd-dark-tertiary: #1e1e1e;
+  --color-dnd-text: #e0e0e0;
+  --color-dnd-text-muted: #999;
+  --color-dnd-blue: #4a90e2;
+  --color-dnd-player: #3a4a5a;
+  --color-dnd-gm: #4a3a5a;
+  
+  --animate-fadeIn: fadeIn 0.3s ease-in;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #1a1a1a;
-  color: #e0e0e0;
-  line-height: 1.6;
-}
-
-input,
-select,
-button {
-  font-family: inherit;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

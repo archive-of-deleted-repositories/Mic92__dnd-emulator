@@ -3,7 +3,6 @@ import { io, Socket } from 'socket.io-client';
 import ChatContainer from './components/ChatContainer';
 import DiceRoller from './components/DiceRoller';
 import SessionManager from './components/SessionManager';
-import './App.css';
 
 interface Message {
   id: string;
@@ -222,17 +221,17 @@ function App() {
   };
 
   return (
-    <div className="container">
-      <header>
-        <h1>D&D Emulator</h1>
-        <p>Claude as your Game Master</p>
+    <div className="max-w-[1400px] mx-auto p-5">
+      <header className="text-center mb-8 p-5 bg-dnd-dark-secondary rounded-lg shadow-lg">
+        <h1 className="text-dnd-gold text-3xl md:text-4xl font-bold mb-2">D&D Emulator</h1>
+        <p className="text-dnd-text-muted text-lg">Claude as your Game Master</p>
       </header>
 
       <main>
-        <div className="game-area">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5 lg:h-[70vh]">
           <ChatContainer messages={messages} onSendMessage={sendMessage} />
 
-          <div className="sidebar">
+          <div className="flex flex-col gap-5">
             <DiceRoller onRollDice={rollDice} />
             <SessionManager
               sessions={sessions}

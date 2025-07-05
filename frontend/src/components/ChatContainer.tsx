@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './ChatContainer.css';
 
 interface Message {
   id: string;
@@ -44,18 +43,29 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, onSendMessage }
       // Parse dice roll notation in GM messages
       return text.replace(
         /\[(\d+d\d+(?:[+-]\d+)?)\]\s*=\s*(\d+)/g,
-        '<span class="dice-roll">[$1 = $2]</span>',
+        '<span class="inline-block bg-dnd-gold text-dnd-dark px-2 py-0.5 rounded-sm font-bold mx-1">[$1 = $2]</span>',
       );
     }
     return text;
   };
 
   return (
-    <div className="chat-container">
-      <div className="chat-messages">
+    <div className="bg-dnd-dark-secondary rounded-lg p-5 flex flex-col shadow-lg h-full">
+      <div className="flex-1 overflow-y-auto p-4 bg-dnd-dark-tertiary rounded mb-4">
         {messages.map((message) => (
-          <div key={message.id} className={`message ${message.type}-message`}>
-            <strong>
+          <div
+            key={message.id}
+            className={`mb-4 p-3 rounded animate-fadeIn ${
+              message.type === 'player'
+                ? 'bg-dnd-player border-l-4 border-dnd-blue'
+                : message.type === 'gm'
+                  ? 'bg-dnd-gm border-l-4 border-dnd-gold'
+                  : message.type === 'system'
+                    ? 'bg-gray-800/30 border-l-4 border-gray-500 text-gray-400 italic'
+                    : 'bg-red-900/30 border-l-4 border-red-500 text-red-300'
+            }`}
+          >
+            <strong className="text-white inline-block mr-2">
               {message.type === 'gm'
                 ? 'GM:'
                 : message.type === 'player'
@@ -78,7 +88,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, onSendMessage }
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="input-area">
+      <form onSubmit={handleSubmit} className="flex gap-3">
         <input
           ref={inputRef}
           type="text"
@@ -86,8 +96,14 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, onSendMessage }
           onChange={(e) => setInputValue(e.target.value)}
           placeholder="Type your action or message..."
           autoComplete="off"
+          className="flex-1 px-3 py-3 bg-dnd-dark-tertiary border border-gray-700 rounded focus:outline-none focus:border-dnd-gold text-dnd-text text-base"
         />
-        <button type="submit">Send</button>
+        <button
+          type="submit"
+          className="px-6 py-3 bg-dnd-gold text-dnd-dark font-bold rounded hover:bg-yellow-600 transition-colors cursor-pointer"
+        >
+          Send
+        </button>
       </form>
     </div>
   );
