@@ -42,6 +42,13 @@
               echo "  ruff format .                      - Format all files"
               echo "  ruff check --fix --unsafe-fixes .  - Lint Python code"
               echo "  nix develop -c uv run mypy .       - Type check Python code"
+              echo ""
+              echo "Frontend commands (run from frontend/ directory):"
+              echo "  npm install                        - Install frontend dependencies"
+              echo "  npm run dev                        - Start frontend dev server"
+              echo "  npm run lint                       - Check TypeScript code with ESLint"
+              echo "  npm run lint:fix                   - Fix linting and formatting issues"
+              echo "  npm run build                      - Build for production"
             '';
           };
 
