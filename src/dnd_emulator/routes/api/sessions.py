@@ -39,3 +39,18 @@ def register_session_routes(app: Flask) -> None:
                 },
             ), 200
         return jsonify({"session_id": session_id, "exists": False}), 404
+
+    @app.route("/api/sessions/<session_id>/messages")
+    def get_session_messages(session_id: str) -> tuple[Any, int]:
+        """Get messages from a specific Claude session."""
+        try:
+            app = cast("DnDApp", current_app)
+            session_data = app.session_manager.get_session_with_messages(session_id)
+
+            if not session_data:
+                return jsonify({"error": "Session not found"}), 404
+
+            return jsonify({"messages": session_data.get("messages", [])}), 200
+        except Exception as e:
+            logger.exception("Error getting session messages")
+            return jsonify({"error": str(e)}), 500

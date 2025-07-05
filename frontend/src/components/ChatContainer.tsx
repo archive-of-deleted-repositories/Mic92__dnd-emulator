@@ -44,7 +44,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, onSendMessage }
       // Parse dice roll notation in GM messages
       return text.replace(
         /\[(\d+d\d+(?:[+-]\d+)?)\]\s*=\s*(\d+)/g,
-        '<span class="dice-roll">[$1 = $2]</span>'
+        '<span class="dice-roll">[$1 = $2]</span>',
       );
     }
     return text;
@@ -59,10 +59,10 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, onSendMessage }
               {message.type === 'gm'
                 ? 'GM:'
                 : message.type === 'player'
-                ? 'You:'
-                : message.type === 'system'
-                ? 'System:'
-                : 'Error:'}
+                  ? 'You:'
+                  : message.type === 'system'
+                    ? 'System:'
+                    : 'Error:'}
             </strong>
             {message.type === 'gm' ? (
               <span

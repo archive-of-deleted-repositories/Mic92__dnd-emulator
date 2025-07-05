@@ -4,6 +4,8 @@ import typescriptParser from '@typescript-eslint/parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import prettier from 'eslint-plugin-prettier';
+import prettierConfig from 'eslint-config-prettier';
 import globals from 'globals';
 
 export default [
@@ -30,9 +32,12 @@ export default [
       'react': react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      'prettier': prettier,
     },
     rules: {
       ...typescript.configs.recommended.rules,
+      ...prettierConfig.rules,
+      'prettier/prettier': 'error',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

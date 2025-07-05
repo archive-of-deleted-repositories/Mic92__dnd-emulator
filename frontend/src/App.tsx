@@ -75,9 +75,7 @@ function App() {
 
     socket.on('session_switched', (data) => {
       setCurrentSessionId(data.session_id);
-      const sessionName = data.session_id
-        ? `${data.session_id.substring(0, 8)}...`
-        : 'New Session';
+      const sessionName = data.session_id ? `${data.session_id.substring(0, 8)}...` : 'New Session';
       const systemMessage: Message = {
         id: Date.now().toString(),
         text: `Switched to: ${sessionName}`,
@@ -141,8 +139,54 @@ function App() {
     socketRef.current.emit('roll_dice', { notation });
   };
 
-  const switchSession = (sessionId: string | null) => {
+  const loadSessionMessages = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/messages`);
+      const data = await response.json();
+      if (data.messages) {
+        // Convert Claude messages to our message format
+        const loadedMessages: Message[] = data.messages.map(
+          (msg: { content: string; role: string }, index: number) => ({
+            id: `loaded-${index}`,
+            text: msg.content,
+            type: msg.role === 'user' ? 'player' : 'gm',
+          }),
+        );
+
+        // Add a system message to indicate messages were loaded
+        const systemMessage: Message = {
+          id: Date.now().toString(),
+          text: `Loaded ${loadedMessages.length} messages from session history`,
+          type: 'system',
+        };
+
+        setMessages([...loadedMessages, systemMessage]);
+      }
+    } catch (error) {
+      console.error('Failed to load session messages:', error);
+    }
+  };
+
+  const switchSession = async (sessionId: string | null) => {
     if (!socketRef.current || sessionId === currentSessionId) return;
+
+    // Clear current messages when switching sessions
+    setMessages([]);
+
+    // Load session messages if switching to an existing session
+    if (sessionId) {
+      await loadSessionMessages(sessionId);
+    } else {
+      // For new sessions, show the welcome message
+      setMessages([
+        {
+          id: '1',
+          text: "Welcome to the adventure! Describe your character and let's begin...",
+          type: 'gm',
+        },
+      ]);
+    }
+
     socketRef.current.emit('switch_session', { session_id: sessionId });
   };
 

@@ -29,11 +29,7 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onRollDice }) => {
       <h3>Dice Roller</h3>
       <div className="dice-buttons">
         {standardDice.map((dice) => (
-          <button
-            key={dice}
-            className="dice-btn"
-            onClick={() => handleDiceRoll(dice)}
-          >
+          <button key={dice} className="dice-btn" onClick={() => handleDiceRoll(dice)}>
             d{dice.substring(2)}
           </button>
         ))}

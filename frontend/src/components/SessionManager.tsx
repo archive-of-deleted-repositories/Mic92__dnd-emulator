@@ -35,9 +35,7 @@ const SessionManager: React.FC<SessionManagerProps> = ({
   };
 
   const truncateSummary = (summary: string, maxLength: number = 30) => {
-    return summary.length > maxLength
-      ? summary.substring(0, maxLength) + '...'
-      : summary;
+    return summary.length > maxLength ? summary.substring(0, maxLength) + '...' : summary;
   };
 
   return (
@@ -61,11 +59,7 @@ const SessionManager: React.FC<SessionManagerProps> = ({
             </option>
           ))}
         </select>
-        <button
-          className="refresh-button"
-          onClick={handleRefresh}
-          title="Refresh sessions"
-        >
+        <button className="refresh-button" onClick={handleRefresh} title="Refresh sessions">
           {isRefreshing ? '✓' : '↻'}
         </button>
       </div>
@@ -77,10 +71,7 @@ const SessionManager: React.FC<SessionManagerProps> = ({
       </p>
       <p>
         Status:{' '}
-        <span
-          id="connection-status"
-          className={isConnected ? 'connected' : 'disconnected'}
-        >
+        <span id="connection-status" className={isConnected ? 'connected' : 'disconnected'}>
           {connectionStatus}
         </span>
       </p>

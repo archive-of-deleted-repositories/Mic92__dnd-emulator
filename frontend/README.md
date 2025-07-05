@@ -10,9 +10,24 @@ npm install
 
 # Start development server (runs on port 3000)
 npm run dev
+
+# Run linting and formatting checks
+npm run lint
+
+# Fix linting and formatting issues automatically
+npm run lint:fix
 ```
 
 The development server proxies API and WebSocket requests to the Flask backend on port 5000.
+
+## Code Quality
+
+This project uses ESLint with TypeScript support and Prettier for code formatting. The ESLint configuration includes:
+- TypeScript type checking
+- React best practices and hooks rules
+- Prettier integration for consistent formatting
+
+All linting and formatting is handled through ESLint, so you only need to use the `lint` and `lint:fix` commands.
 
 ## Production Build
 

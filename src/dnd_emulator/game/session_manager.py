@@ -45,6 +45,8 @@ class ClaudeSessionManager:
             try:
                 session_info = self._parse_session_file(session_file)
                 if session_info:
+                    # Remove messages from list response to reduce data size
+                    session_info.pop("messages", None)
                     sessions.append(session_info)
             except (json.JSONDecodeError, OSError):
                 logger.exception(
@@ -98,14 +100,29 @@ class ClaudeSessionManager:
         first_message = None
         last_activity = None
         message_count = 0
+        messages = []
 
         for line in lines:
             try:
                 entry = json.loads(line)
 
-                # Count messages
+                # Count messages and extract content
                 if entry.get("type") in ["user", "assistant"]:
                     message_count += 1
+
+                    # Extract message data
+                    message_data = entry.get("message", {})
+                    if message_data.get("role") in ["user", "assistant"]:
+                        content = self._extract_message_content(
+                            message_data.get("content", ""),
+                        )
+
+                        messages.append({
+                            "role": message_data.get("role"),
+                            "content": content,
+                            "timestamp": entry.get("timestamp", ""),
+                            "uuid": entry.get("uuid", ""),
+                        })
 
                 # Track timestamps
                 if "timestamp" in entry:
@@ -140,6 +157,7 @@ class ClaudeSessionManager:
             "message_count": message_count,
             "last_activity": last_activity.isoformat(),
             "file_path": str(session_file),
+            "messages": messages,
         }
 
     def get_session_file_path(self, session_id: str) -> Path | None:
@@ -150,3 +168,11 @@ class ClaudeSessionManager:
     def session_exists(self, session_id: str) -> bool:
         """Check if a session exists."""
         return self.get_session_file_path(session_id) is not None
+
+    def get_session_with_messages(self, session_id: str) -> dict[str, Any] | None:
+        """Get a specific session with all its messages."""
+        session_file = self.get_session_file_path(session_id)
+        if not session_file:
+            return None
+
+        return self._parse_session_file(session_file)
