@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -57,17 +58,11 @@ class ClaudeSessionManager:
 
             newest_file = max(jsonl_files, key=lambda f: f.stat().st_mtime)
 
-            try:
-                session_info = self._parse_session_file(newest_file, session_dir.name)
-                if session_info:
-                    # Remove messages from list response to reduce data size
-                    session_info.pop("messages", None)
-                    sessions.append(session_info)
-            except (json.JSONDecodeError, OSError):
-                logger.exception(
-                    "Error parsing session file %s",
-                    newest_file,
-                )
+            session_info = self._parse_session_file(newest_file, session_dir.name)
+            if session_info:
+                # Remove messages from list response to reduce data size
+                session_info.pop("messages", None)
+                sessions.append(session_info)
 
         # Sort by last activity (most recent first)
         sessions.sort(key=lambda s: s["last_activity"], reverse=True)
@@ -77,20 +72,22 @@ class ClaudeSessionManager:
         """Extract text content from Claude message format."""
         if isinstance(content, str):
             return content
-
-        if isinstance(content, list):
-            text_parts = [
-                item.get("text", "")
-                for item in content
-                if isinstance(item, dict) and item.get("type") == "text"
-            ]
-            return " ".join(text_parts)
-
-        return ""
+        text_parts = [
+            item.get("text", "")
+            for item in content
+            if isinstance(item, dict) and item.get("type") == "text"
+        ]
+        return " ".join(text_parts)
 
     def _extract_player_message(self, content: str) -> str:
         """Extract player message from formatted content."""
-        if "Player:" in content:
+        # First try XML tags
+        if "<player>" in content and "</player>" in content:
+            player_match = re.search(r"<player>(.*?)</player>", content, re.DOTALL)
+            if player_match:
+                return player_match.group(1).strip()[:100]
+        # Fallback to old format
+        elif "Player:" in content:
             player_part = content.split("Player:")[-1].split("\n")[0].strip()
             return player_part[:100]  # Truncate long messages
         return content[:100]
@@ -151,13 +148,13 @@ class ClaudeSessionManager:
             "messages": [],
         }
 
-        for line in lines:
-            try:
-                entry = json.loads(line)
-                self._process_single_entry(entry, result)
-            except (json.JSONDecodeError, KeyError, ValueError):
-                continue
+        for i, line in enumerate(lines):
+            entry = json.loads(line)
+            if entry.get("type") in ["user", "assistant"]:
+                logger.debug("Line %d: Processing entry type: %s", i+1, entry.get("type"))
+            self._process_single_entry(entry, result)
 
+        logger.debug("Processed %d messages total", result["message_count"])
         return result
 
     def _process_single_entry(
@@ -168,11 +165,9 @@ class ClaudeSessionManager:
         """Process a single entry from the session file."""
         # Handle messages
         if entry.get("type") in ["user", "assistant"]:
-            # Always count messages for accurate totals
-            result["message_count"] += 1
-
             # Extract and append message (may be filtered)
-            self._extract_and_append_message(entry, result["messages"])
+            # This will increment message_count only if message is not filtered
+            self._extract_and_append_message(entry, result)
 
             # Find first user message
             if entry.get("type") == "user" and result["first_message"] is None:
@@ -184,26 +179,49 @@ class ClaudeSessionManager:
     def _extract_and_append_message(
         self,
         entry: dict[str, Any],
-        messages: list[dict[str, Any]],
+        result: dict[str, Any],
     ) -> None:
         """Extract message data and append to messages list."""
         message_data = entry.get("message", {})
+        messages = result["messages"]
+
         if message_data.get("role") in ["user", "assistant"]:
             content = self._extract_message_content(
                 message_data.get("content", ""),
             )
-
-            # Skip system prompts that were included as user messages
-            if content.startswith("System: You are a Dungeons & Dragons"):
-                return
+            logger.debug(
+                "Extracted content (%d chars): %s...", 
+                len(content) if content else 0,
+                content[:100] if content else "None"
+            )
 
             # Extract actual player message from compound messages
-            if content.startswith("System:") and "Player:" in content:
+            # First try XML tags
+            if "<player>" in content and "</player>" in content:
+                # Extract content between player tags
+                player_match = re.search(r"<player>(.*?)</player>", content, re.DOTALL)
+                if player_match:
+                    content = player_match.group(1).strip()
+                else:
+                    # No player content, skip this message
+                    return
+            elif "<system>" in content and "</system>" in content:
+                # Skip pure system messages
+                return
+            # Fallback to old format for existing sessions
+            elif content.startswith("System:") and "Player:" in content:
                 # Extract just the player part
                 player_part = content.split("Player:")[-1].split("GM:")[0].strip()
                 if player_part:
                     content = player_part
+                else:
+                    # No player content, skip this message
+                    return
+            elif content.startswith("System: You are a Dungeons & Dragons"):
+                # Skip pure system prompts
+                return
 
+            # Only count and append if we have actual content
             messages.append(
                 {
                     "role": message_data.get("role"),
@@ -212,6 +230,7 @@ class ClaudeSessionManager:
                     "uuid": entry.get("uuid", ""),
                 },
             )
+            result["message_count"] += 1
 
     def _set_first_user_message(
         self,

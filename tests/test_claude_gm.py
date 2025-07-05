@@ -1,9 +1,8 @@
 """Test suite for Claude GM functionality using real Claude CLI."""
 
-import os
 import shutil
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
@@ -14,12 +13,12 @@ class TestClaudeGM:
     """Test cases for ClaudeGM class with real Claude CLI."""
 
     @pytest.fixture(autouse=True)
-    def cleanup_sessions(self) -> Generator[None, None, None]:
+    def cleanup_sessions(self) -> Generator[None]:
         """Clean up test session directories before tests."""
         # Clean up before test
         self._cleanup_test_sessions()
 
-        yield
+        return
 
     def _cleanup_test_sessions(self) -> None:
         """Remove test session directories."""
@@ -43,7 +42,10 @@ class TestClaudeGM:
         if claude_projects.exists():
             for session in test_sessions:
                 # Convert session name to Claude project format
-                project_name = f"-Users-joerg--local-share-dnd-emulator-sessions-{session.replace('_', '-')}"
+                project_name = (
+                    f"-Users-joerg--local-share-dnd-emulator-sessions-"
+                    f"{session.replace('_', '-')}"
+                )
                 project_dir = claude_projects / project_name
                 if project_dir.exists():
                     shutil.rmtree(project_dir)
@@ -145,7 +147,6 @@ class TestClaudeGM:
         )
 
         assert isinstance(first_response, str)
-        print(f"\n\nDEBUG: First response: {first_response!r}\n\n")
         assert gm.has_sent_message
         assert gm.session_id == test_session
 
@@ -166,7 +167,6 @@ class TestClaudeGM:
         )
 
         assert isinstance(resume_response, str)
-        print(f"\n\nDEBUG: Resume response: {resume_response!r}\n\n")
 
         # Check if the session has been created
         session_dir = (
@@ -178,11 +178,8 @@ class TestClaudeGM:
             / test_session
         )
         claude_dir = session_dir / ".claude" / "sessions"
-        print(f"Session dir exists: {session_dir.exists()}")
-        print(f"Claude dir exists: {claude_dir.exists()}")
         if claude_dir.exists():
-            files = list(claude_dir.glob("*.jsonl"))
-            print(f"Session files: {[f.name for f in files]}")
+            list(claude_dir.glob("*.jsonl"))
 
         # The response should contain '42' if session resumption works
         assert "42" in resume_response

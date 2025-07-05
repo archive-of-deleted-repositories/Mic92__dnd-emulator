@@ -73,7 +73,8 @@ class ClaudeGM:
 
         # Each session runs in its own directory
         if not self.session_id:
-            raise RuntimeError("No session ID set")
+            msg = "No session ID set"
+            raise RuntimeError(msg)
 
         session_dir = self.sessions_dir / self.session_id
         session_dir.mkdir(parents=True, exist_ok=True)
@@ -127,9 +128,12 @@ class ClaudeGM:
         )
 
         # Log the command for debugging
-        self.logger.info(
-            "Claude command: %s", " ".join(cmd[:3] + ["..."] if len(cmd) > 3 else cmd)
-        )
+        cmd_preview_len = 3
+        if len(cmd) > cmd_preview_len:
+            cmd_str = " ".join([*cmd[:cmd_preview_len], "..."])
+        else:
+            cmd_str = " ".join(cmd)
+        self.logger.info("Claude command: %s", cmd_str)
 
         return cmd
 
@@ -203,17 +207,19 @@ class ClaudeGM:
         """
         # If resuming an existing Claude session or continuing in same process
         if self.has_sent_message or self.claude_session_id:
-            return f"Player: {message}"
+            return f"<player>{message}</player>"
 
         # For new sessions, include system prompt
-        parts = [f"System: {self.system_prompt}"]
+        parts = [f"<system>{self.system_prompt}</system>"]
 
         # Add initial game state if provided
         if context and "game_state" in context:
-            parts.append(f"Current Game State: {json.dumps(context['game_state'])}")
+            parts.append(
+                f"<game_state>{json.dumps(context['game_state'])}</game_state>"
+            )
 
-        parts.append(f"Player: {message}")
-        parts.append("GM:")
+        parts.append(f"<player>{message}</player>")
+        parts.append("<gm>")
 
         return "\n\n".join(parts)
 
@@ -243,42 +249,46 @@ class ClaudeGM:
         self.logger.info("Setting session: %s", session_name)
         self.session_id = session_name
         self.has_sent_message = False  # Reset for new session
-        
+
         # Check if there's an existing Claude session for this directory
         self.claude_session_id = self._find_claude_session_id()
         if self.claude_session_id:
-            self.logger.info("Found existing Claude session: %s", self.claude_session_id)
-    
+            self.logger.info(
+                "Found existing Claude session: %s", self.claude_session_id
+            )
+
     def _find_claude_session_id(self) -> str | None:
         """Find the most recent Claude session ID for the current session directory."""
         if not self.session_id:
             return None
-            
+
         # Claude stores sessions in ~/.claude/projects/ based on working directory
         session_dir = self.sessions_dir / self.session_id
         # Convert path to Claude's project directory naming
         # Claude replaces "/" "_" and "." with "-"
-        project_name = str(session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+        project_name = (
+            str(session_dir).replace("/", "-").replace("_", "-").replace(".", "-")
+        )
         # Claude keeps the leading dash
         if not project_name.startswith("-"):
             project_name = "-" + project_name
-            
+
         claude_project_dir = Path.home() / ".claude" / "projects" / project_name
-        
+
         self.logger.debug("Looking for Claude project dir: %s", claude_project_dir)
-        
+
         if not claude_project_dir.exists():
             self.logger.debug("Claude project dir does not exist")
             return None
-            
+
         # Find the most recent session file
         session_files = list(claude_project_dir.glob("*.jsonl"))
         if not session_files:
             self.logger.debug("No session files found")
             return None
-            
+
         self.logger.debug("Found %d session files", len(session_files))
-        
+
         # Get the most recent file
         newest_file = max(session_files, key=lambda f: f.stat().st_mtime)
         # The session ID is the filename without extension
