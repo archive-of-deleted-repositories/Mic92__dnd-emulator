@@ -44,7 +44,7 @@ class ClaudeGM:
         response = await self._execute_claude(full_prompt)
 
         truncated = (
-            response[:self.RESPONSE_LOG_LIMIT] + "..."
+            response[: self.RESPONSE_LOG_LIMIT] + "..."
             if len(response) > self.RESPONSE_LOG_LIMIT
             else response
         )
@@ -85,23 +85,33 @@ class ClaudeGM:
         """Build the command line arguments for Claude."""
         cmd = [self.claude_path]
 
-        # Add continue flag if we have an active session
-        if self.has_session:
+        # Add resume/continue flag based on session state
+        if self.session_id:
+            # Resume a specific Claude session
+            cmd.extend(["--resume", self.session_id])
+        elif self.has_session:
+            # Continue the most recent session
             cmd.append("--continue")
 
-        cmd.extend([
-            "--print",
-            "--verbose",
-            "--allowedTools", "WebSearch",
-            "--model", "claude-3-5-sonnet-20241022",
-            "--output-format", "stream-json",
-            prompt,
-        ])
+        cmd.extend(
+            [
+                "--print",
+                "--verbose",
+                "--allowedTools",
+                "WebSearch",
+                "--model",
+                "claude-3-5-sonnet-20241022",
+                "--output-format",
+                "stream-json",
+                prompt,
+            ],
+        )
 
         return cmd
 
     async def _read_streaming_response(
-        self, process: asyncio.subprocess.Process,
+        self,
+        process: asyncio.subprocess.Process,
     ) -> list[str]:
         """Read and parse streaming JSON response from Claude."""
         response_parts = []
@@ -121,10 +131,8 @@ class ClaudeGM:
         try:
             json_msg = json.loads(line_str)
 
-
             # Check for session ID in init message
-            if (json_msg.get("type") == "system" and
-                json_msg.get("subtype") == "init"):
+            if json_msg.get("type") == "system" and json_msg.get("subtype") == "init":
                 if "session_id" in json_msg:
                     self.session_id = json_msg["session_id"]
                     self.has_session = True
@@ -141,9 +149,11 @@ class ClaudeGM:
                     parts.extend(self._extract_content(msg["content"]))
 
             # Handle complete message format
-            elif (json_msg.get("type") == "message" and
-                  json_msg.get("role") == "assistant" and
-                  "content" in json_msg):
+            elif (
+                json_msg.get("type") == "message"
+                and json_msg.get("role") == "assistant"
+                and "content" in json_msg
+            ):
                 parts.extend(self._extract_content(json_msg["content"]))
 
         except json.JSONDecodeError:
@@ -153,7 +163,8 @@ class ClaudeGM:
         return parts
 
     def _extract_content(
-        self, content: str | list[str | dict[str, Any]],
+        self,
+        content: str | list[str | dict[str, Any]],
     ) -> list[str]:
         """Extract text content from various content formats."""
         parts = []
@@ -210,3 +221,17 @@ class ClaudeGM:
             self.logger.info("Resetting session %s", self.session_id)
         self.has_session = False
         self.session_id = None
+
+    def set_session(self, session_id: str | None) -> None:
+        """Set a specific Claude session to resume.
+
+        Args:
+            session_id: The Claude session ID to resume, or None for new session.
+
+        """
+        if session_id:
+            self.logger.info("Setting session to resume: %s", session_id)
+            self.session_id = session_id
+            self.has_session = False  # Will use --resume instead of --continue
+        else:
+            self.reset_session()

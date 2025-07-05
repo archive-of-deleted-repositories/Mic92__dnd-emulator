@@ -13,7 +13,6 @@ class TestClaudeGM:
         """Create a ClaudeGM instance."""
         return ClaudeGM()
 
-
     @pytest.mark.asyncio
     async def test_send_message_simple(
         self,

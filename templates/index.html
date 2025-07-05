@@ -58,7 +58,14 @@
 
             <div class="game-info">
               <h3>Session Info</h3>
-              <p>Session ID: <span id="session-id">default</span></p>
+              <div class="session-selector">
+                <label for="session-select">Session:</label>
+                <select id="session-select">
+                  <option value="">New Session</option>
+                </select>
+                <button id="refresh-sessions" title="Refresh sessions">↻</button>
+              </div>
+              <p>Session: <span id="session-id">New</span></p>
               <p>Status: <span id="connection-status">Connecting...</span></p>
             </div>
           </div>

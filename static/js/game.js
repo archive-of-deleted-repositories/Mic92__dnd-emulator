@@ -11,9 +11,11 @@ const diceButtons = document.querySelectorAll(".dice-btn");
 const customDiceInput = document.getElementById("custom-dice");
 const rollCustomButton = document.getElementById("roll-custom");
 const diceResults = document.getElementById("dice-results");
+const sessionSelect = document.getElementById("session-select");
+const refreshSessionsButton = document.getElementById("refresh-sessions");
 
 // Session management
-let currentSessionId = "default";
+let currentSessionId = null;
 
 // Socket.IO event handlers
 socket.on("connect", () => {
@@ -60,6 +62,14 @@ socket.on("error", (data) => {
   addMessage(`Error: ${data.message}`, "error");
 });
 
+socket.on("session_switched", (data) => {
+  console.log("Session switched:", data);
+  currentSessionId = data.session_id;
+  sessionId.textContent = data.session_id || "New";
+  const sessionName = data.session_id ? `${data.session_id.substring(0, 8)}...` : "New Session";
+  addMessage(`Switched to: ${sessionName}`, "system");
+});
+
 // Send message function
 function sendMessage() {
   const message = messageInput.value.trim();
@@ -71,7 +81,7 @@ function sendMessage() {
   // Send to server
   socket.emit("send_message", {
     message: message,
-    session_id: currentSessionId,
+    session_id: currentSessionId,  // null for new sessions
   });
 
   // Clear input
@@ -85,7 +95,7 @@ function addMessage(text, type) {
 
   const strong = document.createElement("strong");
   strong.textContent =
-    type === "gm" ? "GM:" : type === "player" ? "You:" : "System:";
+    type === "gm" ? "GM:" : type === "player" ? "You:" : type === "system" ? "System:" : "Error:";
   messageDiv.appendChild(strong);
 
   // Parse for dice roll notation in GM messages
@@ -162,7 +172,56 @@ customDiceInput.addEventListener("keypress", (e) => {
   }
 });
 
+// Session management functions
+async function loadSessions() {
+  try {
+    const response = await fetch("/api/sessions");
+    const data = await response.json();
+    
+    if (data.sessions) {
+      // Clear existing options
+      sessionSelect.innerHTML = '<option value="">New Session</option>';
+      
+      // Add Claude sessions
+      data.sessions.forEach(session => {
+        const option = document.createElement("option");
+        option.value = session.session_id;
+        // Truncate summary for display
+        const summary = session.summary.length > 30 
+          ? session.summary.substring(0, 30) + "..." 
+          : session.summary;
+        option.textContent = `${summary} (${session.message_count} msgs)`;
+        option.title = `${session.summary}\n${session.first_message}`;
+        sessionSelect.appendChild(option);
+      });
+      
+      // Set current selection
+      sessionSelect.value = currentSessionId || "";
+    }
+  } catch (error) {
+    console.error("Failed to load sessions:", error);
+  }
+}
+
+// Session selector change handler
+sessionSelect.addEventListener("change", (e) => {
+  const newSessionId = e.target.value || null;
+  if (newSessionId !== currentSessionId) {
+    socket.emit("switch_session", { session_id: newSessionId });
+  }
+});
+
+// Refresh sessions button
+refreshSessionsButton.addEventListener("click", () => {
+  loadSessions();
+  refreshSessionsButton.textContent = "✓";
+  setTimeout(() => {
+    refreshSessionsButton.textContent = "↻";
+  }, 1000);
+});
+
 // Focus on input when page loads
 window.addEventListener("load", () => {
   messageInput.focus();
+  loadSessions();
 });

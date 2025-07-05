@@ -37,7 +37,7 @@
               echo "  uv run python -m dnd_emulator      - Run the app"
               echo "  ruff format .                      - Format all files"
               echo "  ruff check --fix --unsafe-fixes .  - Lint Python code"
-              echo "  uv run mypy .                      - Type check Python code"
+              echo "  nix develop -c uv run mypy .       - Type check Python code"
             '';
           };
 

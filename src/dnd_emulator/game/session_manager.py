@@ -35,7 +35,8 @@ class ClaudeSessionManager:
 
         if not self.project_sessions_dir.exists():
             logger.warning(
-                "No Claude sessions directory found at %s", self.project_sessions_dir,
+                "No Claude sessions directory found at %s",
+                self.project_sessions_dir,
             )
             return sessions
 
@@ -45,9 +46,10 @@ class ClaudeSessionManager:
                 session_info = self._parse_session_file(session_file)
                 if session_info:
                     sessions.append(session_info)
-            except (json.JSONDecodeError, OSError) as e:
+            except (json.JSONDecodeError, OSError):
                 logger.exception(
-                    "Error parsing session file %s", session_file,
+                    "Error parsing session file %s",
+                    session_file,
                 )
 
         # Sort by last activity (most recent first)
@@ -72,9 +74,7 @@ class ClaudeSessionManager:
     def _extract_player_message(self, content: str) -> str:
         """Extract player message from formatted content."""
         if "Player:" in content:
-            player_part = (
-                content.split("Player:")[-1].split("\n")[0].strip()
-            )
+            player_part = content.split("Player:")[-1].split("\n")[0].strip()
             return player_part[:100]  # Truncate long messages
         return content[:100]
 
@@ -150,4 +150,3 @@ class ClaudeSessionManager:
     def session_exists(self, session_id: str) -> bool:
         """Check if a session exists."""
         return self.get_session_file_path(session_id) is not None
-

@@ -17,7 +17,9 @@ class TestClaudeSessionManager:
 
     @pytest.fixture
     def session_manager(
-        self, test_sessions_dir: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        test_sessions_dir: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> ClaudeSessionManager:
         """Create a session manager with test data."""
         manager = ClaudeSessionManager()
@@ -26,7 +28,8 @@ class TestClaudeSessionManager:
         return manager
 
     def test_list_and_parse_sessions(
-        self, session_manager: ClaudeSessionManager,
+        self,
+        session_manager: ClaudeSessionManager,
     ) -> None:
         """Test listing and parsing Claude sessions."""
         sessions = session_manager.list_sessions()
@@ -36,8 +39,9 @@ class TestClaudeSessionManager:
 
         # Check that sessions are sorted by last activity (most recent first)
         for i in range(1, len(sessions)):
-            assert sessions[i-1]["last_activity"] >= sessions[i]["last_activity"], \
+            assert sessions[i - 1]["last_activity"] >= sessions[i]["last_activity"], (
                 "Sessions should be sorted by last activity"
+            )
 
         # Verify session structure
         for session in sessions:
@@ -70,4 +74,3 @@ class TestClaudeSessionManager:
         # Test non-existent session
         assert not session_manager.session_exists("non-existent-session-id")
         assert session_manager.get_session_file_path("non-existent-session-id") is None
-

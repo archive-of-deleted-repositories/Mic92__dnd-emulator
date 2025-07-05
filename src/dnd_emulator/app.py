@@ -4,14 +4,16 @@ import asyncio
 import logging
 import os
 import random
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from flask import Flask, render_template
+from flask import Flask, jsonify, render_template
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 
 from dnd_emulator.game.claude_gm import ClaudeGM
+from dnd_emulator.game.session_manager import ClaudeSessionManager
 
 # Load environment variables
 load_dotenv()
@@ -23,8 +25,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize Flask app with correct paths
+# Find the package root directory
+package_root = Path(__file__).parent.parent.parent
+template_dir = package_root / "templates"
+static_dir = package_root / "static"
+
+app = Flask(__name__, template_folder=str(template_dir), static_folder=str(static_dir))
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key")
 
 # Initialize CORS
@@ -36,6 +43,9 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 # Initialize Claude GM
 gm = ClaudeGM()
 
+# Initialize Claude Session Manager
+session_manager = ClaudeSessionManager()
+
 # Game sessions storage (in-memory for now)
 game_sessions: dict[str, dict[str, Any]] = {}
 
@@ -44,6 +54,32 @@ game_sessions: dict[str, dict[str, Any]] = {}
 def index() -> str:
     """Serve the main game interface."""
     return str(render_template("index.html"))
+
+
+@app.route("/api/sessions")
+def list_sessions() -> tuple[Any, int]:
+    """List all available Claude sessions."""
+    try:
+        sessions = session_manager.list_sessions()
+        return jsonify({"sessions": sessions}), 200
+    except Exception as e:
+        logger.exception("Error listing sessions")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/sessions/<session_id>")
+def get_session(session_id: str) -> tuple[Any, int]:
+    """Get details for a specific session."""
+    if session_manager.session_exists(session_id):
+        session_path = session_manager.get_session_file_path(session_id)
+        return jsonify(
+            {
+                "session_id": session_id,
+                "exists": True,
+                "path": str(session_path),
+            },
+        ), 200
+    return jsonify({"session_id": session_id, "exists": False}), 404
 
 
 @socketio.on("connect")
@@ -65,14 +101,21 @@ def handle_disconnect() -> None:
 def handle_message(data: dict[str, Any]) -> None:
     """Handle incoming player messages."""
     message = data.get("message", "")
-    session_id = data.get("session_id", "default")
+    session_id = data.get("session_id")
 
-    logger.info("Received message from session %s: %s", session_id, message)
+    logger.info("Received message from session %s: %s", session_id or "new", message)
 
-    # Get or create session
-    if session_id not in game_sessions:
-        logger.info("Creating new game session: %s", session_id)
-        game_sessions[session_id] = {
+    # Set the Claude session if provided
+    if session_id and session_manager.session_exists(session_id):
+        gm.set_session(session_id)
+    else:
+        gm.set_session(None)
+
+    # Get or create game session context (use session_id or "new" as key)
+    session_key = session_id or "new"
+    if session_key not in game_sessions:
+        logger.info("Creating new game session context: %s", session_key)
+        game_sessions[session_key] = {
             "history": [],
             "game_state": {
                 "players": [],
@@ -81,7 +124,7 @@ def handle_message(data: dict[str, Any]) -> None:
             },
         }
 
-    session = game_sessions[session_id]
+    session = game_sessions[session_key]
 
     # Add message to history
     session["history"].append(f"Player: {message}")
@@ -158,3 +201,18 @@ def handle_dice_roll(data: dict[str, Any]) -> None:
         emit("error", {"message": f"Invalid dice notation: {e!s}"})
 
 
+@socketio.on("switch_session")
+def handle_session_switch(data: dict[str, Any]) -> None:
+    """Handle session switching requests."""
+    session_id = data.get("session_id")
+
+    if session_id and session_manager.session_exists(session_id):
+        # This is a Claude session - tell the GM to use it
+        logger.info("Switching to Claude session: %s", session_id)
+        gm.set_session(session_id)
+        emit("session_switched", {"session_id": session_id})
+    else:
+        # New session (no specific Claude session)
+        logger.info("Starting new session")
+        gm.set_session(None)
+        emit("session_switched", {"session_id": None})
